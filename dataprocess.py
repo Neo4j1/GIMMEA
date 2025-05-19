@@ -52,8 +52,7 @@ unalign = '999999'
 
 class info_fliter:
     def __init__(self, id2attr, attr_count, sent_num, allent):
-        self.model = SentenceTransformer('F://learn/papers/premodel'
-                                         '/Roberta_finetuning_semantic_similarity_stsb_multi_mt').to('cuda:0')
+        self.model = SentenceTransformer('model_path/Roberta_finetuning_semantic_similarity_stsb_multi_mt').to('cuda:0')
         self.id2attr = id2attr
         self.attr2id = [{v: k for k, v in i2a.items()} for i2a in id2attr]
         self.slen = len(id2attr[0])
@@ -157,8 +156,7 @@ def load_img_path(select_kg, ent2ids, captions):
     else:
         ent2id_dict = {**ent2ids[0], **ent2ids[1]}
     if 'FB' in select_kg:
-        root = 'file:///home/wft/code/data/mmkb/images/'  # 131
-        # root = '/home/kmyh/data/wft/code/data/mmkb/mmkb/images/'    #201
+        root = '/data/mmkb/images/'  # 131
         if 'DB' in select_kg:
             kgs = ['FB15K', 'DB15K']
         else:
@@ -168,7 +166,7 @@ def load_img_path(select_kg, ent2ids, captions):
                 if eid in captions:
                     id2img_path[eid] = '<|vision_start|>' + root + kg + "/google_" + str(eid) + ".jpg" + '<|vision_end|>'
     elif 'EN' in select_kg:
-        root = '/home/wft/code/data/OpenEA/imgs/'
+        root = '/data/OpenEA/imgs/'
         if 'DE' in select_kg:
             kgs = ['EN_DE']
         else:
@@ -536,9 +534,8 @@ if __name__ == "__main__":
                 else:
                     strage = "matf"
                 label1 = label
-                # creat_MM_instruct(file_path=f"F://learn/papers/data/{root}/",
-                creat_instruct(file_path=f"F://learn/papers/data/{root}/",
-                                   # creat_instruct(file_path="/home/wft/code/data/mmkb/",
+                # creat_MM_instruct(file_path=f"/data/{root}/",
+                creat_instruct(file_path=f"/data/{root}/",
                                    result_path="./result/{0}/{1}/{2}_{3}_{1}_left_{4}.json".format(basemodel, il,
                                                                                                    dataset1,
                                                                                                    split[1:] + rate,
