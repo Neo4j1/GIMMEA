@@ -35,12 +35,12 @@ Image caption: Each image description follows the format: {entity_id: "<caption>
 
 device = "cuda"
 
-# 清理GPU内存函数
+# Function to clean GPU memory
 def torch_gc(device):
-    if torch.cuda.is_available():  # 检查是否可用CUDA
-        with torch.cuda.device(device):  # 指定CUDA设备
-            torch.cuda.empty_cache()  # 清空CUDA缓存
-            torch.cuda.ipc_collect()  # 收集CUDA内存碎片
+    if torch.cuda.is_available():  # Check if CUDA is available
+        with torch.cuda.device(device):  # Specify CUDA device
+            torch.cuda.empty_cache()  # Clear CUDA cache
+            torch.cuda.ipc_collect()  # Collect CUDA memory fragments
 
 tokenizer = None
 
@@ -100,21 +100,21 @@ def dataset_random(filepath, label, dataset, basemodel, il):
 
 def load_and_merge_json_files(file_paths):
     from collections import defaultdict
-    """读取多个JSON文件并按target字段合并分组"""
+    """Read multiple JSON files and merge them grouped by target field"""
     all_data = []
 
-    # 1. 读取所有文件数据
+    # 1. Read all file data
     for path in file_paths:
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            all_data.extend(data)  # 合并数据
+            all_data.extend(data)  # Merge data
 
-    # 2. 按target分组
+    # 2. Group by target
     target_groups = defaultdict(list)
     for item in all_data:
         target_groups[item["target"]].append(item)
 
-    # 3. 按target排序后返回
+    # 3. Sort by target and return
     redata = [group for target, group in sorted(target_groups.items())]
     print(redata[0][0]["target"] == redata[0][1]["target"] == redata[0][2]["target"] == redata[0][3]["target"] ==
           redata[0][4]["target"])
@@ -178,28 +178,28 @@ def load_img_path(select_kg, ent2ids, captions):
                 if eid in captions:
                     id2img_path[eid] ='<|vision_start|>' + root + kg + "/" + str(eid) + ".png" + '<|vision_end|>'
     else:
-        print('没有找到图片目录！')
+        print('Image directory not found!')
     return id2img_path
 
 
 def mutlti_instruct(result, start, end, s2t, label="eval", neg=False, pos=False):
-    given_ent = []  # 源实体id
-    candi_ents = []  # 候选实体id列表
+    given_ent = []  # Source entity id
+    candi_ents = []  # Candidate entity id list
     incandi = []  # label
-    align_ent = []  # 目标实体id
+    align_ent = []  # Target entity id
     no_candi = 0
     no_in_ills = 0
 
     if len(list(result.values())[0]) != len(set(list(result.values())[0])):
         for tar, res in result.items():
-            seen = {}  # 用于记录元素是否已经出现过
-            new_res = []  # 用于存储去重后的结果
+            seen = {}  # Used to record whether elements have appeared
+            new_res = []  # Used to store deduplicated results
             for r in res:
                 if r not in seen:
-                    seen[r] = 1  # 第一次出现
+                    seen[r] = 1  # First appearance
                     new_res.append(r)
                 else:
-                    seen[r] += 1  # 第二次出现，跳过
+                    seen[r] += 1  # Second appearance, skip
             result[tar] = new_res
 
     neg_sum = 0
@@ -211,7 +211,7 @@ def mutlti_instruct(result, start, end, s2t, label="eval", neg=False, pos=False)
             continue
         ca = v[start: end]
 
-        # 打乱原有排序，提高泛化性
+        # Shuffle original order to improve generalization
         if label != 'eval' and pos:
             random.shuffle(ca)
 
@@ -220,9 +220,9 @@ def mutlti_instruct(result, start, end, s2t, label="eval", neg=False, pos=False)
 
         if s2t[int(k)] in ca:
             incandi.append(str(s2t[int(k)]))
-            # 增加负样本
+            # Add negative samples
             if neg and label == 'train':
-                # 负样本采样
+                # Negative sample sampling
                 neg_sum += 1
                 new_ca = ca.copy()
                 neg_ent = random.choice(v[end:])
@@ -235,7 +235,7 @@ def mutlti_instruct(result, start, end, s2t, label="eval", neg=False, pos=False)
             incandi.append(unalign)
 
             if pos and label == 'train':
-                # 正样本采样
+                # Positive sample sampling
                 pos_sum += 1
                 new_ca = ca.copy()
                 given_ent.append(int(k))
@@ -246,12 +246,11 @@ def mutlti_instruct(result, start, end, s2t, label="eval", neg=False, pos=False)
                 incandi.append(str(s2t[int(k)]))
         align_ent.append(s2t[int(k)])
     if neg and label == 'train':
-        print("负采样比例：", neg_sum / len(result))
+        print("Negative sampling ratio:", neg_sum / len(result))
     if pos and label == 'train':
-        print("正采样比例：", pos_sum / len(result))
-    print('实体数量：', len(given_ent))
-    print("sum of alignment entity no in candidate: {0}, number of itering add alignment entity: {1}".format(no_candi,
-                                                                                                             no_in_ills))
+        print("Positive sampling ratio:", pos_sum / len(result))
+    print('Number of entities:', len(given_ent))
+    print("Sum of alignment entity not in candidate: {0}, number of iterations adding alignment entity: {1}".format(no_candi, no_in_ills))
     return given_ent, candi_ents, incandi
 
 
@@ -265,7 +264,7 @@ def creat_instruct(file_path, result_path, flag, num, label, dataset, basemodel,
     fliter = 'matf' in strage
     negpos = 'np' in strage
     pos = 'p' in strage
-    print('策略参数：属性过滤：{0}， 负采样： {1}，正采样： {2}'.format(fliter, negpos, pos))
+    print('Strategy parameters: attribute filtering: {0}, negative sampling: {1}, positive sampling: {2}'.format(fliter, negpos, pos))
     KGs, _, _, _ = load_data(file_path, dataset, 0.2, attr_flag=True, save=False, llm_flage=True, fliter=fliter)
     if os.path.exists(file_path + dataset):
         caption = load_caption(file_path + dataset + '/', dataset)
@@ -273,7 +272,7 @@ def creat_instruct(file_path, result_path, flag, num, label, dataset, basemodel,
         if 'EN' in dataset:
             caption = load_caption(file_path + 'imgs/', [dataset.split('_15K')[0]])
         else:
-            print('没有找到caption目录')
+            print('Caption directory not found')
             caption = [{}, {}]
     entities = KGs["node"]  # id2attr
     old_ent_rels = KGs["rel"]  # id2rel
@@ -342,7 +341,7 @@ def creat_instruct(file_path, result_path, flag, num, label, dataset, basemodel,
                     error += 1
                 instructs.append(instruct)
               
-            print('error 数据量为：', error, '数据总数：', len(given_ent))
+            print('Error data count:', error, 'Total data count:', len(given_ent))
             save_dir = "result/{0}/{1}/{2}_{3}_{4}".format(basemodel, il, dataset.replace('/norm', '')[:-3], rate,
                                                            strage)
             save_path = save_dir + "/instruct_zero_{0}-{1}_{2}.json".format(start, end, label)
@@ -461,7 +460,7 @@ def result_process(file_path, result_path):
     from transformers import AutoModelForCausalLM
     glm = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch.bfloat16,
                                                trust_remote_code=True)
-    pattern = r'(?<=\[|\{)\d+(?=\]|\})'
+    pattern = r'(?<=$$|\{)\d+(?=$$|\})'
     given_ent, candi_ents, ent_rels, incandi = creat_instruct(file_path, result_path, flag=1, num=5)
     align_res = []
     print("start LLM")
@@ -491,8 +490,8 @@ def result_process(file_path, result_path):
             align_res.append(50000)
         if i == 20 - 1:
             break
-    acc_sum = 0  # LLM筛选出的正确实体数量
-    pre_sum = 0  # 正确实体在LLM输入的候选集中的数量
+    acc_sum = 0  # Number of correct entities filtered by LLM
+    pre_sum = 0  # Number of correct entities in LLM input candidate set
     toolong = 0
     for i in range(len(align_res)):
         if align_res[i] == incandi[i]:
@@ -501,8 +500,8 @@ def result_process(file_path, result_path):
             pre_sum += 1
         if align_res[i] == 40000:
             toolong += 1
-    print("accuary of LMM: {0}".format(acc_sum / pre_sum))
-    print("sum of input too long: {0}".format(toolong))
+    print("Accuracy of LMM: {0}".format(acc_sum / pre_sum))
+    print("Number of inputs that were too long: {0}".format(toolong))
     print("end!")
 
 
@@ -537,15 +536,12 @@ if __name__ == "__main__":
                 else:
                     strage = "matf"
                 label1 = label
-                for datanum in [10, 5, 15, 20][1:3]:
-                    # creat_MM_instruct(file_path=f"F://learn/papers/data/{root}/",
-                    creat_instruct(file_path=f"F://learn/papers/data/{root}/",
+                # creat_MM_instruct(file_path=f"F://learn/papers/data/{root}/",
+                creat_instruct(file_path=f"F://learn/papers/data/{root}/",
                                    # creat_instruct(file_path="/home/wft/code/data/mmkb/",
                                    result_path="./result/{0}/{1}/{2}_{3}_{1}_left_{4}.json".format(basemodel, il,
                                                                                                    dataset1,
                                                                                                    split[1:] + rate,
                                                                                                    label1),
-                                   flag=0, num=datanum, label=label, dataset=dataset + split[:-1], basemodel=basemodel,
+                                   flag=0, num=10, label=label, dataset=dataset + split[:-1], basemodel=basemodel,
                                    il=il, rate=rate, strage=strage)
-
-
