@@ -28,13 +28,13 @@ class LogFormatter():
         return "%s - %s" % (prefix, message) if message else ''
 
 
-# 配置日志
+# Configure logging
 class Logger:
     def __init__(self, log_dir, log_name=None):
         """
-        初始化日志对象
-        :param log_dir: 日志文件保存的目录
-        :param log_name: 日志文件名（可选，默认为当前时间）
+        Initialize logger object
+        :param log_dir: Directory to save log files
+        :param log_name: Log file name (optional, defaults to current time)
         """
         self.log_dir = log_dir
         if not os.path.exists(log_dir):
@@ -43,7 +43,7 @@ class Logger:
         # create log formatter
         log_formatter = LogFormatter()
 
-        # 设置日志文件名
+        # Set log file name
         if log_name is None:
             log_name = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".log"
         else:
@@ -53,8 +53,6 @@ class Logger:
         # create console handler and set level to info
         filepath, file_handler = None, None
         if self.log_filepath is not None:
-            # if rank > 0:
-            #     filepath = '%s-%i' % (filepath, rank)
             filepath = '%s' % (self.log_filepath)
             file_handler = logging.FileHandler(self.log_filepath, "a", encoding='utf-8')
             file_handler.setLevel(logging.DEBUG)
@@ -73,24 +71,21 @@ class Logger:
         self.logger.addHandler(console_handler)
 
     def info(self, message):
-        """记录信息日志"""
+        """Log information message"""
         self.logger.info(message)
 
     def warning(self, message):
-        """记录警告日志"""
+        """Log warning message"""
         self.logger.warning(message)
 
     def error(self, message):
-        """记录错误日志"""
+        """Log error message"""
         self.logger.error(message)
 
 
 class cfg():
     def __init__(self):
         self.args = None
-        # self.this_dir = osp.dirname(__file__)
-        # # change
-        # self.data_root = osp.abspath(osp.join(self.this_dir, '..', 'data', ''))
 
     def get_args(self):
         parser = argparse.ArgumentParser()
@@ -102,8 +97,8 @@ class cfg():
         parser.add_argument('--epoch', default=1, type=int)
         parser.add_argument('--dataset', default='FBYG', type=str,
                             choices=["FBYG", "FBDB", "EN_FR_15K_V2", "EN_DE_15K_V2", "ja_en", "zh_en", "de_en"],
-                            help="Strage of imformation Fliter")
-        parser.add_argument('--strage', default='m_l', type=str, choices=["l_np", "m_l", "m_l_n", "m_l_np", "m_np", "ma_l_np", "matf", "matf_l_np", "matf_l", "mr_l_np", "MM_matf", "MM_matf_l_np"], help="Strage of imformation Fliter")
+                            help="Strategy of information Filter")
+        parser.add_argument('--strage', default='m_l', type=str, choices=["l_np", "m_l", "m_l_n", "m_l_np", "m_np", "ma_l_np", "matf", "matf_l_np", "matf_l", "mr_l_np", "MM_matf", "MM_matf_l_np"], help="Strategy of information Filter")
         self.args = parser.parse_args()
 
 
@@ -113,7 +108,6 @@ def get_topk(result, s2t, logger):
     top_k = [1, 3, 5, 10, 50]
     nofind = 0
     acc_l2r = np.zeros((len(top_k)), dtype=np.float32)
-    # acc_r2l = np.zeros((len(top_k)), dtype=np.float32)
     test_total, test_loss, mean_l2r, mean_r2l, mrr_l2r, mrr_r2l = 0, 0., 0., 0., 0., 0.
     for tar, res in result.items():
         ca = torch.tensor(res)
@@ -122,7 +116,6 @@ def get_topk(result, s2t, logger):
         except:
             nofind += 1
             continue
-            # print(0)
         mean_l2r += (rank + 1)
         mrr_l2r += 1.0 / (rank + 1)
         for i in range(len(top_k)):
@@ -134,14 +127,13 @@ def get_topk(result, s2t, logger):
     mrr_r2l /= len(result)
     for i in range(len(top_k)):
         acc_l2r[i] = round(acc_l2r[i] / len(result), 4)
-        # acc_r2l[i] = round(acc_r2l[i] / len(result), 4)
     logger.info(f"rank result:His@k[1, 3, 5, 10]:{acc_l2r} mrr: {round(mrr_l2r, 4)}")
     logger.info(f"no alignment:{nofind}")
 
 
 def rerank(ill_path, pre_path, result_path, logger):
     """
-    target——align
+    target - align
     :param predict: [{"target": target, "align": output, "predict": predict, "candidates": candis}]
     :param result_path: path, result: {str(id): [candidate_entities]}
     :return:
@@ -151,15 +143,6 @@ def rerank(ill_path, pre_path, result_path, logger):
         predicts = json.load(f)
     with open(result_path, 'r') as f:
         result = json.load(f)
-
-    # with open(result_path.replace("eval", "train"), 'r') as f:
-    #     train_result = json.load(f)
-    # a = 0
-    # for k, v in result.items():
-    #     if len(set(v)) != len(v):
-    #         print(k, ' ', len(set(v)))
-    #         a += 1
-    # print("重复个数：", a)
 
     def read_file(file_paths):
         tups = []
@@ -177,19 +160,19 @@ def rerank(ill_path, pre_path, result_path, logger):
         s2t[i] = j
         t2s[j] = i
 
-    # 在FB2DB15K中，DB中存在2个实体分别与FB中2个实体对齐
-    # 保持原有排序去除二次出现的元素——理由：重复出现的元素为序列中的位置相邻，去除以后并不影响实际结果
+    # In FB2DB15K, there are 2 entities in DB that align with 2 entities in FB respectively
+    # Maintain original order while removing duplicate elements - reason: duplicate elements are adjacent in sequence, removing them doesn't affect actual results
 
     if len(list(result.values())[0]) != len(set(list(result.values())[0])):
         for tar, res in result.items():
-            seen = {}  # 用于记录元素是否已经出现过
-            new_res = []  # 用于存储去重后的结果
+            seen = {}  # Used to record whether elements have appeared
+            new_res = []  # Used to store deduplicated results
             for r in res:
                 if r not in seen:
-                    seen[r] = 1  # 第一次出现
+                    seen[r] = 1  # First appearance
                     new_res.append(r)
                 else:
-                    seen[r] += 1  # 第二次出现，跳过
+                    seen[r] += 1  # Second appearance, skip
             result[tar] = new_res
 
     logger.info("test result")
@@ -216,7 +199,7 @@ def rerank(ill_path, pre_path, result_path, logger):
                 npre += 1
                 continue
             if index != 0:
-                # 保持原有排序，将对齐实体插入首位
+                # Maintain original order, insert aligned entity at first position
                 res.pop(index)
                 res.insert(0, int(pre))
             mid += index + 1
@@ -224,11 +207,11 @@ def rerank(ill_path, pre_path, result_path, logger):
             rerank_res[str(tar)] = res
         else:
             rerank_res[str(tar)] = res
-    logger.info('不在源实体中的target数量为：{0}'.format(noin))
-    logger.info('不在候选实体中的target数量为：{0}'.format(npre))
+    logger.info('Number of targets not in source entities: {0}'.format(noin))
+    logger.info('Number of targets not in candidate entities: {0}'.format(npre))
     get_topk(rerank_res, s2t, logger)
-    logger.info("准确率为: {0}".format(round(acc / len(predicts), 4)))
-    logger.info("测试数据总数: {0}".format(len(predicts)))
+    logger.info("Accuracy: {0}".format(round(acc / len(predicts), 4)))
+    logger.info("Total test data count: {0}".format(len(predicts)))
     try:
         logger.info("rerank mean of index: {0}".format(round(mid / found, 4)))
     except:
@@ -239,7 +222,7 @@ def rerank(ill_path, pre_path, result_path, logger):
 if __name__ == '__main__':
     cfg = cfg()
     cfg.get_args()
-    # 初始化 Accelerator
+    # Initialize Accelerator
     accelerator = Accelerator()
 
     basemodel = "PMF"
@@ -264,7 +247,7 @@ if __name__ == '__main__':
         llm = Qwen2vl_Lora(model_path)
 
     else:
-        print('没有选择基模型')
+        print('No base model selected')
         exit()
 
     for rate in ["0.2", "0.5", "0.8"]:
@@ -293,7 +276,7 @@ if __name__ == '__main__':
 
         if cfg.args.lora:
             logger.info('train')
-            logger.info('lora_dropout: {0}, num_train_epochs: {1}, strage: {2}'.format(cfg.args.dropout, cfg.args.epoch,
+            logger.info('lora_dropout: {0}, num_train_epochs: {1}, strategy: {2}'.format(cfg.args.dropout, cfg.args.epoch,
                                                                                        cfg.args.strage))
             print([data_path + "_train.json" for data_path in data_paths[:cfg.args.neg_sample]])
             llm.model_lora([data_path + "_train.json" for data_path in data_paths[:cfg.args.neg_sample]], lora_path,
@@ -301,8 +284,7 @@ if __name__ == '__main__':
 
         if cfg.args.test:
             logger.info('eval')
-            logger.info('strage: {0}'.format(cfg.args.strage))
-            # m_l 的数据中没有负采样数据
+            logger.info('strategy: {0}'.format(cfg.args.strage))
             pre_path = "./result/{0}/{1}/{2}_{3}_{4}/eval_{5}_result.json".format(basemodel, il, cfg.args.dataset, rate,
                                                                                   cfg.args.strage, num)
             if 'l' in cfg.args.strage and 'm' in cfg.args.strage:
@@ -313,12 +295,10 @@ if __name__ == '__main__':
                 test = 'none'
             else:
                 test = 'none'
-                # test = cfg.args.strage
             llm.model_test([data_path.replace(cfg.args.strage, test) + "_eval.json" for data_path in data_paths],
                            lora_path + '_' + str(cfg.args.epoch), pre_path)
 
             result_path = "./result/{0}/{1}/{2}_{3}_{1}_left_{4}.json".format(basemodel, il, dataset1, rate,
                                                                               'eval')
-            file_dir = '/home/kmyh/data/wft/code/data/mmkb/{0}'.format(cfg.args.dataset + '15K')
+            file_dir = 'data/mmkb/{0}'.format(cfg.args.dataset + '15K')
             rerank(file_dir, pre_path, result_path, logger)
-
